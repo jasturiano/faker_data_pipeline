@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.mypy_cache/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Environment
+.env
+.venv/
+venv/
+
+# Project specific
+*.db
+*.duckdb
+*.duckdb.wal
+data/
+logs/
+reports/
+poetry.lock
+
+# macOS
+.DS_Store
