@@ -22,6 +22,9 @@ jobs:
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
         
+    - name: Update Poetry Lock
+      run: poetry lock --no-update
+      
     - name: Install dependencies
       run: poetry install
       
@@ -46,6 +49,9 @@ jobs:
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
         
+    - name: Update Poetry Lock
+      run: poetry lock --no-update
+      
     - name: Install dependencies
       run: poetry install
       
