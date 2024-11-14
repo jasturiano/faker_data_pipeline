@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "data_pipeline"
 version = "0.1.0"
-description = "Data pipeline for anonymizing and storing person data"
-authors = ["Your Name <your.email@example.com>"]
+description = "Data pipeline for anonymizing and storing data from the Faker API"
+authors = ["J. Asturiano <48779823+jasturiano@users.noreply.github.com>"]
 packages = [
     { include = "data_pipeline" },
     { include = "data_pipeline/utils" }
@@ -18,6 +18,7 @@ pandas = "^2.0.0"
 prometheus-client = "^0.16.0"
 great-expectations = "^0.17"
 rich = "^13.7.0"
+isort = "^5.12.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"
