@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: stg_persons
+    columns:
+
+      - name: email_provider
+        description: "Email provider domain"
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+
+      - name: age_group
+        description: "Age group categories"
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+          - accepted_values:
+              values:
+                - "[18-20]"
+                - "[21-30]"
+                - "[31-40]"
+                - "[41-50]"
+                - "[51-60]"
+                - "[61-80]"
+
+      - name: country
+        description: "Country of residence"
+        data_type: VARCHAR
+        data_tests:
+          - not_null
+
+      

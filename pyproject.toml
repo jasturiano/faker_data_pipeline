@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "data_pipeline"
+version = "0.1.0"
+description = "Data pipeline for anonymizing and storing data from the Faker API using dbt and DuckDB"
+authors = ["J. Asturiano <48779823+jasturiano@users.noreply.github.com>"]
+packages = [
+    { include = "data_pipeline" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.0.0"
+httpx = "^0.24.0"
+duckdb = "1.1.3"
+tqdm = "^4.65.0"
+pandas = "^2.0.0"
+rich = "^13.7.0"
+isort = "^5.12.0"
+dbt-core = "^1.7.3"
+dbt-duckdb = "^1.7.0"
+numpy = "<2.0.0"
+pyarrow = "^14.0.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.4.3"
+black = "^23.11.0"
+mypy = "^1.7.0"
+ruff = "^0.1.5"
+pytest-asyncio = "^0.20.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["data_pipeline/tests"]
+python_files = ["test_*.py"]
+

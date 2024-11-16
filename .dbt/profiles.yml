@@ -1,0 +1,8 @@
+faker_data_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: persons.duckdb
+      schema: main
+      threads: 4

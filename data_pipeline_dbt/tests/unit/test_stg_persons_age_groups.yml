@@ -1,0 +1,13 @@
+unit_tests:
+  - name: test_age_group_categorization
+    description: "Test age group categorization logic handles boundary cases - age 20 should be in [18-20] and age 21 should be in [21-30]"
+    model: stg_persons
+    given:
+      - input: ref('persons')
+        rows:
+          - {age: 20, email_provider: 'gmail.com', country: 'US'}
+          - {age: 21, email_provider: 'yahoo.com', country: 'US'}
+    expect:
+      rows:
+        - {age_group: '[18-20]', email_provider: 'gmail.com', country: 'US'}
+        - {age_group: '[21-30]', email_provider: 'yahoo.com', country: 'US'} 

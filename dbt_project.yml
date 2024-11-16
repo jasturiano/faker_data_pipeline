@@ -1,0 +1,19 @@
+name: 'faker_data_pipeline'
+version: '1.0'
+config-version: 2
+
+profile: 'faker_data_pipeline'
+
+model-paths: ["data_pipeline_dbt/models"]
+analysis-paths: ["data_pipeline_dbt/analyses"]
+test-paths: ["data_pipeline_dbt/tests"]
+seed-paths: ["data_pipeline_dbt/seeds"]
+macro-paths: ["data_pipeline_dbt/macros"]
+snapshot-paths: ["data_pipeline_dbt/snapshots"]
+
+models:
+  faker_data_pipeline:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: view

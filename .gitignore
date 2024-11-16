@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.mypy_cache/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Environment
+.env
+.venv/
+venv/
+
+# Project specific
+*.db
+*.duckdb
+*.duckdb.wal
+data/
+logs/
+reports/
+poetry.lock
+raw_data/
+
+# macOS
+.DS_Store
+
+# dbt packages and outputs
+dbt_packages/
+target/
+logs/
+user.yml

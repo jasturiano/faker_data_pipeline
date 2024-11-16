@@ -1,0 +1,97 @@
+name: Faker Data Pipeline CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        
+    - name: Update Poetry Lock
+      run: poetry lock --no-update
+      
+    - name: Install dependencies
+      run: poetry install
+      
+    - name: Code Quality Checks
+      run: |
+        poetry run black . --check
+        poetry run isort . --check-only
+        poetry run mypy data_pipeline/
+        
+  test:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        
+    - name: Update Poetry Lock
+      run: poetry lock --no-update
+      
+    - name: Install dependencies
+      run: poetry install
+      
+    - name: Run Tests
+      run: |
+        poetry run pytest tests/
+        
+
+  docker:
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Build Docker image
+      run: |
+        docker build -t faker-pipeline:latest .
+        
+    # TODO: Push this image to a Docker Registry (e.g., GCR, Docker Hub)
+    # Example for GCR:
+    # - name: Authenticate with GCR
+    #   run: echo ${{ secrets.GCR_JSON_KEY }} | docker login -u _json_key --password-stdin https://gcr.io
+    #
+    # - name: Tag and Push to GCR
+    #   run: |
+    #     docker tag faker-pipeline:latest gcr.io/YOUR_PROJECT_ID/faker-pipeline:latest
+    #     docker push gcr.io/YOUR_PROJECT_ID/faker-pipeline:latest
+
+    - name: Run Docker container
+      run: |
+        docker run --rm faker-pipeline:latest
+
+  deploy:
+    needs: docker
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy notification
+      run: |
+        echo "🚀 Pipeline is ready for deployment!"
