@@ -21,8 +21,9 @@ venv/
 data/
 logs/
 reports/
-poetry.lock
 raw_data/
+persons.duckdb
+poetry.lock
 
 # macOS
 .DS_Store
@@ -31,4 +32,4 @@ raw_data/
 dbt_packages/
 target/
 logs/
-user.yml
+.dbt/.user.yml
