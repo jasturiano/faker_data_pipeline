@@ -20,12 +20,6 @@ A data pipeline project that generates fake personal data, processes it using db
 make install
 ```
 
-3. Configure dbt:
-
-
-```bash
-cp .dbt/profiles.yml.example .dbt/profiles.yml
-```
 
 ## Usage
 
@@ -35,7 +29,7 @@ The pipeline can be run with individual commands or as a complete pipeline:
 
 ```bash
 make fetch-data
-make run-dbt
+make dbt
 make reports
 ```
 
@@ -63,9 +57,9 @@ All models are materialized as views in DuckDB:
 - `stg_persons`: Initial staging of raw person data
 
 ### Marts
-- `dim_age_groups`: Age demographics and Gmail usage
-- `dim_location`: Country-level Gmail adoption
-- `fact_email_usage`: Email provider usage by demographics
+- `persons_email_usage`: Email provider usage by demographics
+- `persons_location`: Country-level Gmail adoption
+- `persons_age_groups`: Age group demographics and Gmail usage
 
 ## Reports
 
@@ -106,6 +100,11 @@ docker run faker-pipeline
 - `GENDER`: Filter for data generation (default: male)
 - `BATCH_SIZE`: Records per batch (default: 1000)
 - `TOTAL`: Total records to generate (default: 30000)
+
+## Continuous Integration
+
+The project uses GitHub Actions for CI/CD, which includes quality checks, testing, and Docker image building.
+
 
 
 
