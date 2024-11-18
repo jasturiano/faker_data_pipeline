@@ -84,7 +84,7 @@ class DataFetcher:
                         "_quantity": self.batch_size,
                         "_seed": batch_id,
                     },
-                    timeout=10.0,
+                    timeout=20.0,
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -118,7 +118,7 @@ class DataFetcher:
                         results.extend(batch_data)
                         progress.advance(task)
                     except Exception as e:
-                        logger.error(f"Batch failed: {str(e)}")
+                        logger.error(f"Batch failed: {str(e)}", exc_info=True)
 
         return results[: self.total] if results else []
 
