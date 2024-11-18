@@ -1,178 +1,93 @@
-import logging
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+import unittest
+from unittest.mock import MagicMock, patch
 
 import duckdb
-from rich.console import Console
-from rich.panel import Panel
-from rich.progress import Progress
-from rich.table import Table
 
-from data_pipeline.utils import safe_fetch_value
-
-logger = logging.getLogger(__name__)
-
-DB_PATH = "persons.duckdb"
+from data_pipeline.report_generation import (
+    QualityMetrics,
+    check_data_quality,
+    generate_report,
+)
 
 
-@dataclass
-class QualityMetrics:
-    """Data class for quality metrics."""
+class TestReportGeneration(unittest.TestCase):
+    @patch("data_pipeline.report_generation.duckdb.connect")
+    def test_check_data_quality(self, mock_connect: MagicMock) -> None:
+        # Mock the database connection and cursor
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value = mock_conn
+        mock_conn.execute.return_value = mock_cursor
 
-    total_records: int
-    valid_records: int
-    overall_score: float
-    completeness: Dict[str, float]
-    uniqueness: Dict[str, float]
-    format_validity: Dict[str, float]
-    pii_masking: float
+        # Mock the fetchone results for each query
+        mock_cursor.fetchone.side_effect = [
+            (100,),  # Total records
+            (0.9,),  # Completeness for email_provider
+            (0.8,),  # Uniqueness for email_provider
+            (0.95,),  # Format validity for email_provider
+            (0.85,),  # Completeness for country
+            (0.75,),  # Uniqueness for country
+            (0.9,),  # Format validity for country
+            (0.8,),  # Completeness for age_group
+            (0.7,),  # Uniqueness for age_group
+            (0.85,),  # Format validity for age_group
+        ]
 
+        # Call the function
+        metrics = check_data_quality(mock_conn)
 
-def check_data_quality(conn: duckdb.DuckDBPyConnection) -> QualityMetrics:
-    """Check data quality metrics using dbt models."""
-    # Get total records from staging
-    result = conn.execute("SELECT COUNT(*) FROM main.stg_persons").fetchone()
-    total_records = safe_fetch_value(result)
+        # Assertions
+        self.assertEqual(metrics.total_records, 100)
+        self.assertAlmostEqual(metrics.completeness["email_provider"], 0.9)
+        self.assertAlmostEqual(metrics.uniqueness["email_provider"], 0.8)
+        self.assertAlmostEqual(metrics.format_validity["email_provider"], 0.95)
 
-    # Check completeness for key fields using staging model
-    fields = ["email_provider", "country", "age_group"]
-    completeness: Dict[str, float] = {}
-    uniqueness: Dict[str, float] = {}
-    format_validity: Dict[str, float] = {}
+    @patch("data_pipeline.report_generation.Path.exists", return_value=True)
+    @patch("data_pipeline.report_generation.Console")
+    @patch("data_pipeline.report_generation.duckdb.connect")
+    def test_generate_report(
+        self,
+        mock_connect: MagicMock,
+        mock_console: MagicMock,
+        mock_path_exists: MagicMock,
+    ) -> None:
+        # Mock the database connection
+        mock_conn = MagicMock()
+        mock_connect.return_value = mock_conn
 
-    for field in fields:
-        # Completeness from staging
-        result = conn.execute(
-            f"SELECT COUNT({field})::FLOAT / NULLIF(COUNT(*), 0) FROM main.stg_persons"
-        ).fetchone()
-        completeness[field] = safe_fetch_value(result)
+        # Mock the console
+        mock_console_instance = mock_console.return_value
 
-        # Uniqueness from staging
-        result = conn.execute(
-            f"""
-            SELECT COUNT(DISTINCT {field})::FLOAT / NULLIF(COUNT({field}), 0) 
-            FROM main.stg_persons
-            """
-        ).fetchone()
-        uniqueness[field] = safe_fetch_value(result)
+        # Mock the database queries
+        mock_conn.execute.return_value.fetchone.side_effect = [
+            (1,),  # Test connection
+            (100,),  # Total records
+            (0.9,),  # Completeness for email_provider
+            (0.8,),  # Uniqueness for email_provider
+            (0.95,),  # Format validity for email_provider
+            (0.85,),  # Completeness for country
+            (0.75,),  # Uniqueness for country
+            (0.9,),  # Format validity for country
+            (0.8,),  # Completeness for age_group
+            (0.7,),  # Uniqueness for age_group
+            (0.85,),  # Format validity for age_group
+            (50.0,),  # Gmail percentage in Germany
+            (10, 100, 10.0),  # Gmail users over 60
+        ]
 
-        # Format validity (example for age_group)
-        if field == "age_group":
-            result = conn.execute(
-                r"""
-                SELECT COUNT(*)::FLOAT / NULLIF(COUNT(*), 0)
-                FROM main.stg_persons
-                WHERE age_group SIMILAR TO '\[[0-9]+-[0-9]+\]|\[60\+\]'
-                """
-            ).fetchone()
-            format_validity[field] = safe_fetch_value(result)
-        else:
-            format_validity[field] = 0.0
+        # Mock the fetchall for top countries
+        mock_conn.execute.return_value.fetchall.return_value = [
+            ("Country1", 1000),
+            ("Country2", 800),
+            ("Country3", 600),
+        ]
 
-    # Check PII masking from anonymized view
-    pii_masking = 1.0  # Since we're using the anonymized view
+        # Call the function
+        generate_report()
 
-    overall_score = (
-        sum(completeness.values())
-        + sum(uniqueness.values())
-        + sum(format_validity.values())
-        + pii_masking
-    ) / (len(completeness) + len(uniqueness) + len(format_validity) + 1)
-
-    return QualityMetrics(
-        total_records=int(total_records),
-        valid_records=int(total_records),
-        overall_score=overall_score,
-        completeness=completeness,
-        uniqueness=uniqueness,
-        format_validity=format_validity,
-        pii_masking=pii_masking,
-    )
-
-
-def generate_report(db_path: str = DB_PATH) -> None:
-    """Generate reports from dbt models."""
-    console = Console()
-
-    try:
-        with Progress() as progress:
-            task = progress.add_task("[cyan]Generating report...", total=100)
-
-            conn = duckdb.connect(db_path)
-            progress.update(task, advance=20)
-
-            # Data Quality Section
-            console.print(
-                "\n[bold cyan]Data Quality Dashboard[/bold cyan]", justify="center"
-            )
-            console.print("=" * 80, justify="center")
-
-            quality_metrics = check_data_quality(conn)
-            progress.update(task, advance=30)
-
-            # Summary Table
-            summary_table = Table(show_header=True, header_style="bold magenta")
-            summary_table.add_column("Metric", style="cyan")
-            summary_table.add_column("Value", justify="right")
-
-            summary_table.add_row("Total Records", str(quality_metrics.total_records))
-            summary_table.add_row("Valid Records", str(quality_metrics.valid_records))
-            summary_table.add_row(
-                "Overall Quality Score", f"{quality_metrics.overall_score:.2%}"
-            )
-
-            console.print(Panel(summary_table, title="Summary", border_style="cyan"))
-
-            # Analytics Section
-            console.print(
-                "\n[bold cyan]Analytics Dashboard[/bold cyan]", justify="center"
-            )
-            console.print("=" * 80, justify="center")
-
-            # Gmail Usage Analytics from reports model
-            analytics_table = Table(show_header=True, header_style="bold magenta")
-            analytics_table.add_column("Metric", style="cyan")
-            analytics_table.add_column("Value", justify="right")
-
-            # Get metrics from reports model
-            metrics = conn.execute(
-                """
-                SELECT metric_name, metric_value 
-                FROM main.reports 
-                WHERE metric_name IN (
-                    'germany_gmail_percentage',
-                    'senior_gmail_users'
-                )
-            """
-            ).fetchall()
-
-            for metric_name, value in metrics:
-                display_name = {
-                    "germany_gmail_percentage": "Gmail Users in Germany 🇩🇪",
-                    "senior_gmail_users": "Gmail Users Over 60 👴",
-                }.get(metric_name, metric_name)
-
-                analytics_table.add_row(display_name, str(value))
-
-            console.print(
-                Panel(
-                    analytics_table,
-                    title="Gmail Usage Stats",
-                    border_style="turquoise2",
-                )
-            )
-
-            progress.update(task, advance=100)
-
-    except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {str(e)}")
-        logger.error(f"Error generating report: {str(e)}", exc_info=True)
-        raise
-    finally:
-        conn.close()
+        # Assertions
+        mock_console_instance.print.assert_called()  # Check if console print was called
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    generate_report()
+    unittest.main()
