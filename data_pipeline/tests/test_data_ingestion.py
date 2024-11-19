@@ -17,9 +17,9 @@ def mock_api_response() -> Dict[str, Any]:
         "data": [
             {
                 "id": 1,
-                "firstname": "John",
-                "lastname": "Doe",
-                "email": "john.doe@example.com",
+                "firstname": "Clark",
+                "lastname": "Kent",
+                "email": "clark.kent@example.com",
                 "phone": "1234567890",
                 "birthday": "1990-01-01",
                 "gender": "male",
@@ -42,10 +42,58 @@ def fetcher() -> DataFetcher:
 @pytest.mark.asyncio
 async def test_fetch_batch() -> None:
     """Test fetching a single batch of data."""
+    # Create mock response data
+    mock_response_data = {
+        "status": "OK",
+        "code": 200,
+        "data": [
+            {
+                "id": 1,
+                "firstname": "Clark",
+                "lastname": "Kent",
+                "email": "clark.kent@example.com",
+                "phone": "1234567890",
+                "birthday": "1990-01-01",
+                "gender": "male",
+                "address": {
+                    "street": "Main St",
+                    "city": "Metropolis",
+                    "country": "USA",
+                },
+            }
+        ],
+    }
+
+    # Create mock response
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = lambda: mock_response_data
+
+    # Create mock client
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_response
+
+    # Create fetcher instance
     fetcher = DataFetcher(total=10, gender="male", batch_size=10)
-    async with httpx.AsyncClient() as client:
-        batch_data = await fetcher._fetch_batch(client=client, batch_id=1)
-        assert len(batch_data) == 10
+
+    # Execute the fetch
+    batch_data = await fetcher._fetch_batch(client=mock_client, batch_id=1)
+
+    # Assertions
+    assert isinstance(batch_data, list)
+    assert len(batch_data) == 1
+    assert batch_data[0]["firstname"] == "Clark"
+
+    # Verify the API was called with correct parameters
+    mock_client.get.assert_called_once_with(
+        fetcher.base_url,
+        params={
+            "gender": "male",
+            "_quantity": 10,
+            "_seed": 1,
+        },
+        timeout=20.0,
+    )
 
 
 @pytest.mark.asyncio
